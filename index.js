@@ -12,8 +12,8 @@ const extensionName = "SillyTavern-Chub-Search";
 const extensionFolderPath = `scripts/extensions/${extensionName}/`;
 
 // Endpoint for API call
-const API_ENDPOINT_SEARCH = "https://api.chub.ai/api/characters/search";
-const API_ENDPOINT_DOWNLOAD = "https://api.chub.ai/api/characters/download";
+const API_ENDPOINT_SEARCH = "https://api.chub.ai/search"; // TODO: add namespace?
+const API_ENDPOINT_DOWNLOAD = "https://gateway.chub.ai/downloads";
 
 const defaultSettings = {
     findCount: 10,
@@ -52,6 +52,8 @@ async function loadSettings() {
 
 /**
  * Downloads a custom character based on the provided URL.
+ * 
+ * FIXME: This is deprecated and not working
  * @param {string} input - A string containing the URL of the character to be downloaded.
  * @returns {Promise<void>} - Resolves once the character has been processed or if an error occurs.
  */
@@ -173,21 +175,21 @@ async function fetchCharactersBySearch({ searchTerm, includeTags, excludeTags, n
     // Clear previous search results
     chubCharacters = [];
 
-    if (searchData.nodes.length === 0) {
+    if (searchData.data.nodes.length === 0) {
         return chubCharacters;
     }
-    let charactersPromises = searchData.nodes.map(node => getCharacter(node.fullPath));
+    let charactersPromises = searchData.data.nodes.map(node => getCharacter(node.fullPath));
     let characterBlobs = await Promise.all(charactersPromises);
 
     characterBlobs.forEach((character, i) => {
         let imageUrl = URL.createObjectURL(character);
         chubCharacters.push({
             url: imageUrl,
-            description: searchData.nodes[i].tagline || "Description here...",
-            name: searchData.nodes[i].name,
-            fullPath: searchData.nodes[i].fullPath,
-            tags: searchData.nodes[i].topics,
-            author: searchData.nodes[i].fullPath.split('/')[0],
+            description: searchData.data.nodes[i].tagline || "Description here...",
+            name: searchData.data.nodes[i].name,
+            fullPath: searchData.data.nodes[i].fullPath,
+            tags: searchData.data.nodes[i].topics,
+            author: searchData.data.nodes[i].fullPath.split('/')[0],
         });
     });
 
@@ -210,6 +212,7 @@ async function searchCharacters(options) {
     }
     console.log('Searching for characters', options);
     const characters = await fetchCharactersBySearch(options);
+    console.log('Characters found', characters);
     if (characterListContainer) {
         characterListContainer.classList.remove('searching');
     }
@@ -262,7 +265,7 @@ function generateCharacterListItem(character, index) {
                 <div class="description">${character.description}</div>
                 <div class="tags">${character.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>
             </div>
-            <div data-path="${character.fullPath}" class="menu_button download-btn fa-solid fa-cloud-arrow-down faSmallFontSquareFix"></div>
+            <div data-path="${character.url.split('/').pop()}" class="menu_button download-btn fa-solid fa-cloud-arrow-down faSmallFontSquareFix"></div>
         </div>
     `;
 }
@@ -507,34 +510,34 @@ async function displayCharactersInListViewPopup() {
  * @returns {Promise<Blob>} - Resolves with a Blob of the fetched character data.
  */
 async function getCharacter(fullPath) {
+    // let response = await fetch(
+    //     API_ENDPOINT_DOWNLOAD,
+    //     {
+    //         method: "POST",
+    //         headers: {
+    //             'Content-Type': 'application/json'
+    //         },
+    //         body: JSON.stringify({
+    //             fullPath: fullPath,
+    //             format: "tavern",
+    //             version: "main"
+    //         }),
+    //     }
+    // );
+
+    // If the request failed, try a backup endpoint - https://avatars.charhub.io/{fullPath}/avatar.webp FIXME: ALWAYS WAS GOING TO FAIL, also avatar.webp -> chara_card_v2.png
+    // if (!response.ok) {
+        // console.log(`Request failed for ${fullPath}, trying backup endpoint`);
     let response = await fetch(
-        API_ENDPOINT_DOWNLOAD,
+        `https://avatars.charhub.io/avatars/${fullPath}/chara_card_v2.png`,
         {
-            method: "POST",
+            method: "GET",
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                fullPath: fullPath,
-                format: "tavern",
-                version: "main"
-            }),
         }
     );
-
-    // If the request failed, try a backup endpoint - https://avatars.charhub.io/{fullPath}/avatar.webp
-    if (!response.ok) {
-        console.log(`Request failed for ${fullPath}, trying backup endpoint`);
-        response = await fetch(
-            `https://avatars.charhub.io/avatars/${fullPath}/avatar.webp`,
-            {
-                method: "GET",
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-            }
-        );
-    }
+    // }
     let data = await response.blob();
     return data;
 }

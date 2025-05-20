@@ -1,4 +1,10 @@
-# Fixed SillyTavern Chub Search
+# oshhost's SillyTavern Chub Search
+
+Not working yet :)
+
+This is a fork of the [Fixed SillyTavern Chub Search](realcoloride/Fixed-SillyTavern-Chub-Search) plugin with updated api endpoints (21/05/2025).
+
+# Fixed SillyTavern Chub Search Readme ->
 
 Fixed SillyTavern Chub Search is a FIX for the SillyTavern Search Chub Search Extension which provides a quick and easy way to search for new cards from [CHUB](https://www.chub.ai/about) from the comfort of your tavern. 
 
